@@ -33,13 +33,23 @@ def run_vtu_automator():
     creds = load_credentials()
     print("🚀 Starting VTU Video Progress Automator (V3 - Fully Automated)...")
     
+    # --- MODIFICATION: Ask for the URL before opening the browser ---
+    print("\n" + "="*50)
+    course_url = input("📝 Please paste the VTU course URL here and press Enter:\n> ").strip()
+    
+    if not course_url.startswith("http"):
+        print("❌ Invalid URL provided. Please restart and provide a valid http/https link.")
+        exit()
+    print("="*50 + "\n")
+    # ----------------------------------------------------------------
+
     options = webdriver.ChromeOptions()
     driver = webdriver.Chrome(options=options)
     
     try:
         # Automated Login
         login_url = "https://online.vtu.ac.in/auth/login"
-        print(f"\n🔄 Navigating to login page...")
+        print(f"🔄 Navigating to login page...")
         driver.get(login_url)
         
         print("🔑 Logging in automatically...")
@@ -60,8 +70,7 @@ def run_vtu_automator():
         # We wait until the URL changes from the login screen
         WebDriverWait(driver, 20).until(EC.url_changes(login_url))
         
-        # Navigate to VTU Learning Course automatically
-        course_url = "https://online.vtu.ac.in/student/learning/1-data-analytics-with-python"
+        # Navigate to VTU Learning Course automatically using the inputted URL
         print(f"📚 Going to the course module: {course_url}")
         driver.get(course_url)
         
