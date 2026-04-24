@@ -41,6 +41,13 @@
 2. developer is not responsible for any academic penalties or account suspension
 3. use it at your own risk
 
+## 🌐 The VTU Automation Ecosystem
+
+This project is part of a larger ecosystem of automation tools designed for engineering students:
+* [Internship Report Automator](https://github.com/Shreyas445/VTU-Internship-Report-filler)
+* [Internship Diary Bot](https://github.com/Shreyas445/VTU-Internship-diary-Automation)
+* [Project Diary Automation](https://github.com/Shreyas445/VTU-Project-Diary-Automation)
+* [Course Progress Filler](https://github.com/Shreyas445/VTU-Course-Filler)
 
 ## License
 This project is licensed under the [MIT License](LICENSE).
