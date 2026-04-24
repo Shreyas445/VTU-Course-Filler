@@ -30,6 +30,17 @@
    ```bash
    python main.py
    ```
+ <br>
+ 
+### <p align="center">OR</p>
+<br>
+
+##  ⚡ Run the `python fast.py` script to make the automation `10x faster`. 
+   ```bash
+   python fast.py
+   ```
+<br> 
+
 2. Open `credentials.json` and enter your valid login credentials.
 3. Run the script again. The browser will launch, log you in, and navigate to the learning module.
 4. Click on any video. The injected script will handle the rest and show a green success popup when the backend is synced.
