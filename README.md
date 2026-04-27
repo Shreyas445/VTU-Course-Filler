@@ -1,4 +1,4 @@
-# VTU Video Progress Automator
+# VTU OEC PEC online Cource Video Progress Automator
 
 🚀 A highly automated Python script that intercepts network requests to batch-sync video progress for VTU online learning modules. 
 
@@ -11,7 +11,7 @@
 * **In-Page UI Injection:** Injects a custom success overlay directly into the DOM once synchronization is complete.
 
 ## Prerequisites
-* Python 3.8+
+* Python 3.0+
 * Google Chrome installed
 * [Selenium](https://pypi.org/project/selenium/)
 
