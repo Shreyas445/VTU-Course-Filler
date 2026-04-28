@@ -5,6 +5,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from background_activity import BackgroundLogger
 
 CREDENTIALS_FILE = "credentials.json"
 
@@ -99,31 +100,54 @@ def get_js_hook():
             if (!body) return;
 
             if (state === 'syncing') {
-                if (dot) dot.style.background = '#42a5f5';
+                var hasErrors = (data.errors || 0) > 0;
+                var barColor = hasErrors ? 'linear-gradient(90deg,#e65100,#ff9800)' : 'linear-gradient(90deg,#1e88e5,#64b5f6)';
+                var pctColor = hasErrors ? '#ff9800' : '#64b5f6';
+                var dotColor = hasErrors ? '#ff9800' : '#42a5f5';
+                if (dot) dot.style.background = dotColor;
                 var pct = data.pct || 0;
                 body.innerHTML = [
                     '<span style="font-weight:600;color:#fff;font-size:12px;">Lec ' + data.id + '</span>',
                     '<div style="flex:1;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;min-width:80px;overflow:hidden;">',
-                    '  <div style="width:' + pct + '%;height:100%;background:linear-gradient(90deg,#1e88e5,#64b5f6);border-radius:2px;transition:width 0.3s ease;"></div>',
+                    '  <div style="width:' + pct + '%;height:100%;background:' + barColor + ';border-radius:2px;transition:width 0.3s ease;"></div>',
                     '</div>',
-                    '<span style="font-weight:700;color:#64b5f6;font-size:13px;min-width:36px;text-align:right;">' + pct + '%</span>',
-                    '<span style="color:rgba(255,255,255,0.3);font-size:11px;">' + data.mins + 'min</span>',
+                    '<span style="font-weight:700;color:' + pctColor + ';font-size:13px;min-width:36px;text-align:right;">' + pct + '%</span>',
+                    hasErrors ? '<span style="color:#ef5350;font-size:11px;">' + data.errors + ' err</span>' : '<span style="color:rgba(255,255,255,0.3);font-size:11px;">' + data.mins + 'min</span>',
                     '<span style="display:flex;gap:3px;align-items:center;">',
-                    '  <span style="width:4px;height:4px;border-radius:50%;background:#42a5f5;animation:vtuDot 1.2s infinite 0s;"></span>',
-                    '  <span style="width:4px;height:4px;border-radius:50%;background:#42a5f5;animation:vtuDot 1.2s infinite 0.2s;"></span>',
-                    '  <span style="width:4px;height:4px;border-radius:50%;background:#42a5f5;animation:vtuDot 1.2s infinite 0.4s;"></span>',
+                    '  <span style="width:4px;height:4px;border-radius:50%;background:' + dotColor + ';animation:vtuDot 1.2s infinite 0s;"></span>',
+                    '  <span style="width:4px;height:4px;border-radius:50%;background:' + dotColor + ';animation:vtuDot 1.2s infinite 0.2s;"></span>',
+                    '  <span style="width:4px;height:4px;border-radius:50%;background:' + dotColor + ';animation:vtuDot 1.2s infinite 0.4s;"></span>',
                     '</span>'
                 ].join('');
             }
 
             else if (state === 'done') {
-                if (dot) dot.style.background = '#66bb6a';
-                body.innerHTML = [
-                    '<span style="color:#66bb6a;font-size:14px;">&#10003;</span>',
-                    '<span style="font-weight:600;color:#66bb6a;font-size:12px;">Lec ' + data.id + ' Complete</span>',
-                    '<span style="color:rgba(255,255,255,0.35);font-size:11px;">' + data.mins + 'min synced</span>',
-                    '<span style="color:rgba(255,255,255,0.3);font-size:11px;margin-left:auto;">Unpause briefly, then click next video</span>'
-                ].join('');
+                var allFailed = data.errors > 0 && data.sent === 0;
+                var partial = data.errors > 0 && data.sent > 0;
+                if (allFailed) {
+                    if (dot) dot.style.background = '#ef5350';
+                    body.innerHTML = [
+                        '<span style="color:#ef5350;font-size:14px;">&#10007;</span>',
+                        '<span style="font-weight:600;color:#ef5350;font-size:12px;">Lec ' + data.id + ' Failed</span>',
+                        '<span style="color:rgba(255,255,255,0.4);font-size:11px;margin-left:auto;">Server error (VTU issue). Try later.</span>'
+                    ].join('');
+                } else if (partial) {
+                    if (dot) dot.style.background = '#ff9800';
+                    body.innerHTML = [
+                        '<span style="color:#ff9800;font-size:14px;">&#9888;</span>',
+                        '<span style="font-weight:600;color:#ff9800;font-size:12px;">Lec ' + data.id + ' Partial</span>',
+                        '<span style="color:rgba(255,255,255,0.35);font-size:11px;">' + data.sent + ' ok, ' + data.errors + ' failed</span>',
+                        '<span style="color:rgba(255,255,255,0.3);font-size:11px;margin-left:auto;">Unpause, then next video</span>'
+                    ].join('');
+                } else {
+                    if (dot) dot.style.background = '#66bb6a';
+                    body.innerHTML = [
+                        '<span style="color:#66bb6a;font-size:14px;">&#10003;</span>',
+                        '<span style="font-weight:600;color:#66bb6a;font-size:12px;">Lec ' + data.id + ' Complete</span>',
+                        '<span style="color:rgba(255,255,255,0.35);font-size:11px;">' + data.mins + 'min synced</span>',
+                        '<span style="color:rgba(255,255,255,0.3);font-size:11px;margin-left:auto;">Unpause briefly, then click next video</span>'
+                    ].join('');
+                }
             }
 
             else if (state === 'idle') {
@@ -153,61 +177,107 @@ def get_js_hook():
                     }
                 }
 
+                // ALWAYS update active ID when we see a different lecture
+                // This kills the old loop IMMEDIATELY, even before the new loop starts
+                if (window.__vtu_active && window.__vtu_active !== lectureId) {
+                    addLog('Switched from Lecture ' + window.__vtu_active + ' to ' + lectureId);
+                    setPanel('idle', {});
+                }
+                window.__vtu_active = lectureId;
+
                 if (args[1] && typeof args[1].body === 'string' && !window.__vtu_done[lectureId]) {
-                    window.__vtu_done[lectureId] = true;
 
                     try {
                         var payload = JSON.parse(args[1].body);
                         var total = Math.floor(payload.total_duration_seconds || 0);
+                        var currentPos = Math.floor(payload.current_time_seconds || 0);
+
+                        // ── PLAY DETECTION: Only start when video has actually been played ──
+                        // The website sends heartbeats only after playback. If current_time < 5,
+                        // the video just loaded but hasn't really been played yet. Skip and wait.
+                        if (total > 0 && currentPos < 5) {
+                            addLog('Lecture ' + lectureId + ': waiting for play (pos=' + currentPos + 's)');
+                            // Don't mark as done — let the next heartbeat retrigger
+                            return _origFetch.apply(window, args);
+                        }
 
                         if (total > 0) {
+                            window.__vtu_done[lectureId] = true;
+                            var startFrom = currentPos;
                             var mins = Math.round(total / 60);
-                            var numReqs = Math.ceil(total / 30);
-                            addLog('Lecture ' + lectureId + ' | Duration: ' + total + 's (' + mins + 'min) | Sending ' + numReqs + ' heartbeats');
+                            var CHUNK = 60;  // ── CHUNK SIZE: Seconds per heartbeat (increase = fewer requests) ──
+                            // ── REQUEST GAP: Delay between successful requests in ms (increase = slower/safer) ──
+                            var REQUEST_GAP = 500;
+                            var numReqs = Math.ceil((total - startFrom) / CHUNK);
+                            addLog('Lecture ' + lectureId + ' | Duration: ' + total + 's (' + mins + 'min) | Start from: ' + startFrom + 's | Heartbeats: ' + numReqs);
 
-                            setPanel('syncing', { id: lectureId, mins: mins, total: total, pct: 0, current: 0 });
+                            setPanel('syncing', { id: lectureId, mins: mins, total: total, pct: 0, current: startFrom, errors: 0 });
 
                             var fetchUrl = url;
                             var fetchOpts = args[1];
                             var basePayload = payload;
                             var sent = 0;
                             var errors = 0;
+                            var myId = lectureId;
 
                             setTimeout(async function() {
-                                for (var t = 30; t <= total + 30; t += 30) {
+
+                                for (var t = startFrom + CHUNK; t <= total + CHUNK; t += CHUNK) {
+                                    if (window.__vtu_active !== myId) {
+                                        addLog('Lecture ' + myId + ' cancelled (switched video)');
+                                        return;
+                                    }
                                     var currentT = Math.min(t, total);
 
                                     var p = {};
                                     p.current_time_seconds = currentT;
                                     p.total_duration_seconds = basePayload.total_duration_seconds;
-                                    p.seconds_just_watched = 30;
+                                    p.seconds_just_watched = CHUNK;
 
-                                    var newBody = JSON.stringify(p);
+                                    var ok = false;
+                                    for (var attempt = 0; attempt < 3; attempt++) {
+                                        if (window.__vtu_active !== myId) return;
 
-                                    _origFetch(fetchUrl, {
-                                        method: fetchOpts.method || 'POST',
-                                        headers: fetchOpts.headers,
-                                        body: newBody,
-                                        credentials: fetchOpts.credentials || 'same-origin'
-                                    }).then(function() {
-                                        sent++;
-                                    }).catch(function() {
-                                        sent++;
-                                        errors++;
-                                    });
-
-                                    await new Promise(function(resolve) { setTimeout(resolve, 50); });
-
-                                    var pct = Math.min(100, Math.round((currentT / total) * 100));
-                                    setPanel('syncing', { id: lectureId, mins: mins, total: total, pct: pct, current: currentT });
-
-                                    if (t % 300 === 0 || currentT === total) {
-                                        addLog('Progress: ' + pct + '% (' + currentT + '/' + total + 's)');
+                                        try {
+                                            var resp = await _origFetch(fetchUrl, {
+                                                method: fetchOpts.method || 'POST',
+                                                headers: fetchOpts.headers,
+                                                body: JSON.stringify(p),
+                                                credentials: fetchOpts.credentials || 'same-origin'
+                                            });
+                                            if (resp.ok) {
+                                                ok = true;
+                                                sent++;
+                                                break;
+                                            }
+                                            addLog('Heartbeat ' + currentT + 's: status ' + resp.status + ', retry ' + (attempt+1));
+                                            // ── RETRY DELAY: Time to wait before retrying a failed request (in ms) ──
+                                            await new Promise(function(r) { setTimeout(r, 1500); });
+                                        } catch(e) {
+                                            addLog('Heartbeat ' + currentT + 's: network error, retry ' + (attempt+1));
+                                            // ── RETRY DELAY: Same as above ──
+                                            await new Promise(function(r) { setTimeout(r, 1500); });
+                                        }
                                     }
+                                    if (!ok) errors++;
+
+                                    if (window.__vtu_active !== myId) return;
+
+                                    var pct = Math.min(100, Math.round((sent / numReqs) * 100));
+                                    setPanel('syncing', { id: myId, mins: mins, total: total, pct: pct, current: currentT, errors: errors });
+
+                                    if ((sent + errors) % 5 === 0 || currentT === total) {
+                                        addLog(pct + '% actual | ' + currentT + '/' + total + 's | Sent: ' + sent + ' Errors: ' + errors);
+                                    }
+
+                                    // ── REQUEST GAP: Pause between requests to avoid overwhelming the server ──
+                                    await new Promise(function(r) { setTimeout(r, REQUEST_GAP); });
                                 }
 
-                                addLog('All heartbeats fired for Lecture ' + lectureId + '!');
-                                setPanel('done', { id: lectureId, mins: mins, errors: errors });
+                                if (window.__vtu_active === myId) {
+                                    addLog('Lecture ' + myId + ' done. Sent: ' + sent + '/' + numReqs + ', Errors: ' + errors);
+                                    setPanel('done', { id: myId, mins: mins, errors: errors, sent: sent });
+                                }
 
                             }, 10);
                         }
@@ -272,7 +342,12 @@ def run_vtu_automator():
     print()
 
     options = webdriver.ChromeOptions()
+    # Enable performance logging so BackgroundLogger can capture network traffic
+    options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
     driver = webdriver.Chrome(options=options)
+
+    # Start background network logger
+    bg_logger = BackgroundLogger(driver)
 
     try:
         # ── Login ──
@@ -295,9 +370,12 @@ def run_vtu_automator():
             By.XPATH, "/html/body/div/div[1]/div[1]/div[2]/div/form/button")
         login_btn.click()
 
-        print("[2/3] Login submitted. Waiting for redirect...")
-        WebDriverWait(driver, 20).until(EC.url_changes(login_url))
+        print("[2/3] Login submitted. Waiting for redirect (up to 2 min)...")
+        WebDriverWait(driver, 120).until(EC.url_changes(login_url))
         print("[2/3] Login successful!")
+
+        # Start background logger AFTER login (so auth tokens are captured)
+        bg_logger.start()
 
         print(f"[3/3] Navigating to course: {course_url}")
         driver.get(course_url)
@@ -313,6 +391,7 @@ def run_vtu_automator():
 
         js_hook = get_js_hook()
         last_log_idx = 0
+        stats_counter = 0
 
         while True:
             try:
@@ -330,6 +409,12 @@ def run_vtu_automator():
                             print(f"  >> {entry}")
                         last_log_idx = len(logs)
 
+                # Print network stats every ~15 seconds
+                stats_counter += 1
+                if stats_counter % 10 == 0:
+                    stats = bg_logger.get_stats()
+                    print(f"  [NET] Total: {stats['total_requests']} | API: {stats['api_requests']} | Progress: {stats['progress_requests']} | Errors: {stats['errors']}")
+
             except Exception:
                 last_log_idx = 0
 
@@ -338,6 +423,11 @@ def run_vtu_automator():
     except KeyboardInterrupt:
         print("\nStopped by user (Ctrl+C)")
     finally:
+        print("Stopping background logger...")
+        try:
+            bg_logger.stop()
+        except:
+            pass
         print("Closing browser...")
         try:
             driver.quit()
