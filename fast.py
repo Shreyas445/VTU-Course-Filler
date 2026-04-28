@@ -5,7 +5,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from background_activity import BackgroundLogger
+# from background_activity import BackgroundLogger  <-- Commented out
 
 CREDENTIALS_FILE = "credentials.json"
 
@@ -342,12 +342,14 @@ def run_vtu_automator():
     print()
 
     options = webdriver.ChromeOptions()
+    
     # Enable performance logging so BackgroundLogger can capture network traffic
-    options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
+    # options.set_capability("goog:loggingPrefs", {"performance": "ALL"}) <-- Commented out
+    
     driver = webdriver.Chrome(options=options)
 
     # Start background network logger
-    bg_logger = BackgroundLogger(driver)
+    # bg_logger = BackgroundLogger(driver) <-- Commented out
 
     try:
         # ── Login ──
@@ -375,7 +377,7 @@ def run_vtu_automator():
         print("[2/3] Login successful!")
 
         # Start background logger AFTER login (so auth tokens are captured)
-        bg_logger.start()
+        # bg_logger.start() <-- Commented out
 
         print(f"[3/3] Navigating to course: {course_url}")
         driver.get(course_url)
@@ -402,18 +404,18 @@ def run_vtu_automator():
                         print("[Hook] Injected into page")
                         last_log_idx = 0
 
-                    # Pull browser logs into terminal
-                    logs = driver.execute_script("return window.__vtu_log || [];")
-                    if logs and len(logs) > last_log_idx:
-                        for entry in logs[last_log_idx:]:
-                            print(f"  >> {entry}")
-                        last_log_idx = len(logs)
+                # Pull browser logs into terminal
+                logs = driver.execute_script("return window.__vtu_log || [];")
+                if logs and len(logs) > last_log_idx:
+                    for entry in logs[last_log_idx:]:
+                        print(f"  >> {entry}")
+                    last_log_idx = len(logs)
 
                 # Print network stats every ~15 seconds
-                stats_counter += 1
-                if stats_counter % 10 == 0:
-                    stats = bg_logger.get_stats()
-                    print(f"  [NET] Total: {stats['total_requests']} | API: {stats['api_requests']} | Progress: {stats['progress_requests']} | Errors: {stats['errors']}")
+                # stats_counter += 1
+                # if stats_counter % 10 == 0:
+                #     stats = bg_logger.get_stats()
+                #     print(f"  [NET] Total: {stats['total_requests']} | API: {stats['api_requests']} | Progress: {stats['progress_requests']} | Errors: {stats['errors']}")  <-- Commented out
 
             except Exception:
                 last_log_idx = 0
@@ -423,11 +425,12 @@ def run_vtu_automator():
     except KeyboardInterrupt:
         print("\nStopped by user (Ctrl+C)")
     finally:
-        print("Stopping background logger...")
-        try:
-            bg_logger.stop()
-        except:
-            pass
+        # print("Stopping background logger...")
+        # try:
+        #     bg_logger.stop()
+        # except:
+        #     pass  <-- Commented out
+        
         print("Closing browser...")
         try:
             driver.quit()
