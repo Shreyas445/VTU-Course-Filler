@@ -1,4 +1,4 @@
-# VTU OEC PEC online Cource Video Progress Automator
+# VTU OEC PEC online Course Video Progress Automator
 ###  🔥 Code updated of `fast.py` on 28 Apr 2026
 🚀 A highly automated Python script that intercepts network requests to batch-sync video progress for VTU online learning modules. 
 
